@@ -1,4 +1,9 @@
-﻿#include <GL/glew.h>
+﻿﻿// Assignment 2
+// Team members: 1. Hui Zhang 40170679
+//               2. Zexu Hao 40233332
+//               3. Mingming Zhang 40258080
+
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -164,9 +169,72 @@ void initGL() {
     }
 }
 
+void processInput(GLFWwindow* window, glm::vec3& translation, float& rotationAngle,
+    bool& rotationPending,float& scaleZ) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    const float moveSpeed = 0.001f; // Movement speed
+    const float rotationSpeed = glm::radians(30.0f); // Rotation speed (30 degrees converted to radians)
+    // Translation controls
+    //Press W -> move up along +ve z-axis
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        translation.z += moveSpeed; 
+    //Press S -> move down along -ve z-axis
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        translation.z -= moveSpeed; 
+    //Press A -> move horizontally left along +ve x-axis & -ve y-axis
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        translation.x += moveSpeed; 
+        translation.y -= moveSpeed;
+    }
+    //Press D -> move horizontally right along -ve x-axis & +ve y-axis
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        translation.x -= moveSpeed; 
+        translation.y += moveSpeed;
+    }
+
+    // Rotation controls
+     // Press Q -> Counterclockwise rotation by 30° (ensure execution only once)
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS && !rotationPending) {
+        rotationAngle -= 30.0f;
+        rotationPending = true; // Mark rotation as completed to avoid repeated execution
+    }
+
+    // Press E -> Clockwise rotation by 30° (ensure execution only once)
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS && !rotationPending) {
+        rotationAngle += 30.0f;
+        rotationPending = true; // Mark rotation as completed to avoid repeated execution
+    }
+
+    // When keys are released, reset rotationPending to allow the next rotation
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_RELEASE && glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE) {
+        rotationPending = false;
+    }
+
+    // Scaling controls
+    // Press R -> Scale in the +z direction
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+        scaleZ += 0.001f; // Increase scale factor (small increment)
+        if (scaleZ > 5.0f) scaleZ = 5.0f; // Limit maximum value
+    }
+
+    // Press F -> Scale in the -z direction
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        scaleZ -= 0.001f; // Decrease scale factor (small increment)
+        if (scaleZ < 0.1f) scaleZ = 0.1f; // Limit minimum value
+    }
+}
+
 void render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(shaderProgram);
+
+    // Apply transformations
+    glm::mat4 transformation = glm::mat4(1.0f);  // Start with identity matrix
+    transformation = glm::translate(transformation, translation);  // Apply translation
+    transformation = glm::rotate(transformation, rotationAngle, glm::vec3(0.0f, 1.0f, 0.0f));  // Apply rotation (around Y-axis)
+    transformation = glm::scale(transformation, glm::vec3(1.0f, 1.0f, scaleZ));  // Apply scaling along Z-axis
 
     // 传递矩阵到着色器
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
@@ -202,8 +270,13 @@ int main() {
         glfwTerminate();
         return -1;
     }
-
+    // Initialize OpenGL settings and load the model
     initGL();
+
+    glm::vec3 translation(0.0f, 0.0f, 0.0f);  // Initial position
+    float rotationAngle = 0.0f;  // Initial rotation angle
+    bool rotationPending = false;  // Flag for rotation control
+    float scaleZ = 1.0f;  // Initial scaling factor
 
     while (!glfwWindowShouldClose(window)) {
         render();
